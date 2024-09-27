@@ -5,7 +5,6 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.SQLException;
-import java.util.regex.Pattern;
 
 public class StudentForm extends JFrame {
 
@@ -40,7 +39,6 @@ public class StudentForm extends JFrame {
         // Метки и поля ввода
         JLabel surnameLabel = new JLabel("Фамилия:");
         surnameField = new JTextField(20);
-
         JLabel nameLabel = new JLabel("Имя:");
         nameField = new JTextField(20);
 
@@ -95,83 +93,58 @@ public class StudentForm extends JFrame {
     }
 
     private void submitForm() {
-        // Получение и валидация данных
+        // Получение данных из полей
         String surname = surnameField.getText().trim();
         String name = nameField.getText().trim();
         String ageText = ageField.getText().trim();
-        if (surname.isEmpty() | name.isEmpty() | ageText.isEmpty()) {
-            showErrorDialog("Все поля обязательны для заполнения.");
+
+        // Валидация полей на непустоту
+        if (!ValidationUtil.areFieldsNotEmpty(surname, name, ageText)) {
+            ValidationUtil.showErrorDialog(this, "Все поля обязательны для заполнения.");
             return;
         }
-        int age;
-        try {
-            age = Integer.parseInt(ageText);
-            if (age <= 0) {
-                showErrorDialog("Возраст должен быть положительным числом.");
-                return;
-            }
-        } catch (NumberFormatException e) {
-            showErrorDialog("Возраст должен быть числом.");
+
+        // Валидация возраста
+        if (!ValidationUtil.isPositiveInteger(ageText)) {
+            ValidationUtil.showErrorDialog(this, "Возраст должен быть положительным числом.");
             return;
         }
+
+        int age = Integer.parseInt(ageText);
 
         // Валидация фамилии и имени
-        if (!isValidRussianName(surname)) {
-            showErrorDialog("Фамилия должна содержать только русские буквы, первая буква должна быть заглавной.");
+        if (!ValidationUtil.isValidRussianName(surname)) {
+            ValidationUtil.showErrorDialog(this, "Фамилия должна содержать только русские буквы, первая буква должна быть заглавной.");
             return;
         }
 
-        if (!isValidRussianName(name)) {
-            showErrorDialog("Имя должно содержать только русские буквы, первая буква должна быть заглавной.");
+        if (!ValidationUtil.isValidRussianName(name)) {
+            ValidationUtil.showErrorDialog(this, "Имя должно содержать только русские буквы, первая буква должна быть заглавной.");
             return;
         }
-
-        // Капитализация первой буквы
-        String formattedSurname = capitalizeFirstLetter(surname);
-        String formattedName = capitalizeFirstLetter(name);
 
         Student student = new Student(surname, name, age);
 
         try {
             studentDAO.addStudent(student);
-            showInfoDialog("Студент успешно добавлен.");
+            ValidationUtil.showInfoDialog(this, "Студент успешно добавлен.");
             clearForm();
         } catch (SQLException ex) {
-            showErrorDialog("Ошибка при добавлении студента: " + ex.getMessage());
+            ValidationUtil.showErrorDialog(this, "Ошибка при добавлении студента: " + ex.getMessage());
         }
     }
-    private boolean isValidRussianName(String name) {
-        // Регулярное выражение для проверки русских букв с заглавной первой буквой
-        String regex = "^[А-ЯЁ][а-яё]+$";
-        return Pattern.matches(regex, name);
-    }
 
-    private String capitalizeFirstLetter(String str) {
-        if (str == null || str.isEmpty()) return str;
-        return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
-    }
+    /**
+     * Очищает поля формы после успешного добавления студента.
+     */
     private void clearForm() {
         surnameField.setText("");
         nameField.setText("");
         ageField.setText("");
     }
 
-    private void showErrorDialog(String message) {
-        JOptionPane.showMessageDialog(this,
-                message,
-                "Ошибка",
-                JOptionPane.ERROR_MESSAGE);
-    }
-
-    private void showInfoDialog(String message) {
-        JOptionPane.showMessageDialog(this,
-                message,
-                "Информация",
-                JOptionPane.INFORMATION_MESSAGE);
-    }
-
+    // Основной метод для запуска формы
     public static void main(String[] args) {
-
         SwingUtilities.invokeLater(() -> {
             StudentForm form = new StudentForm();
             form.setVisible(true);
